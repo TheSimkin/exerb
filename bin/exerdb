@@ -1,0 +1,42 @@
+#!/usr/bin/env ruby
+
+require 'bundler/setup'
+require 'contracts'
+require 'redis'
+require 'rakuna'
+require 'pry'
+
+class MuscleGroupResource < Rakuna::Resource::Collection
+  include Rakuna::Content::JSON
+  include Rakuna::Data::Redis
+
+  def output
+    redis.smembers 'musclegroups'
+  end
+end
+
+class ExerciseResource < Rakuna::Resource::Collection
+  include Rakuna::Content::JSON
+  include Rakuna::Data::Redis
+
+  def create_path
+    result = redis.sadd 'exercises', input.fetch('name')
+    input.fetch 'name'
+  end
+
+  def trace?
+    true
+  end
+
+  def output
+    redis.smembers 'exercises'
+  end
+end
+
+Webmachine.application.routes do
+  add ['trace', :*], Webmachine::Trace::TraceResource
+  add ['exercises'], ExerciseResource
+  add ['musclegroups'], MuscleGroupResource
+end
+
+Webmachine.application.run
